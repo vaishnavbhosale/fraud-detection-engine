@@ -29,9 +29,12 @@ public class FraudLog {
     @Column(columnDefinition = "TEXT")
     private String explanation;
 
-    private String recommendations;
+    private String recommendation;
 
     private String triggeredRule;
 
     private LocalDateTime createdAt;
+
+    public void error(String s, Exception e) {
+    }
 }

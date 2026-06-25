@@ -1,37 +1,83 @@
 package com.vaishnav.fraud_detection.service;
 
+import com.vaishnav.fraud_detection.model.AIFraudReport;
+import com.vaishnav.fraud_detection.model.FraudLog;
 import com.vaishnav.fraud_detection.model.Transaction;
 import com.vaishnav.fraud_detection.model.TransactionStatus;
+import com.vaishnav.fraud_detection.repository.FraudLogRepository;
 import com.vaishnav.fraud_detection.repository.TransactionRepository;
 import com.vaishnav.fraud_detection.rules.RuleEngine;
 import com.vaishnav.fraud_detection.rules.RuleResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
-@RequiredArgsConstructor // no need to create constructor
+@RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final FraudLogRepository fraudLogRepository;
     private final RuleEngine ruleEngine;
+    private final AIAnalysisService aiAnalysisService;
+    private final AlertService alertService;
 
     public Transaction saveTransaction(Transaction tx) {
 
-        // 1. Run the transaction through our gauntlet of rules
         RuleResult result = ruleEngine.evaluate(tx);
 
-        // 2. Overwrite the client's status based on our server-side evaluation
-        if (result.isSuspicious()) {
-            tx.setStatus(TransactionStatus.FLAGGED);
+        if (!result.isSuspicious()) {
 
-            // Optional but highly recommended: Log the reason or save it to the DB!
-            // System.out.println("Flagged Transaction: " + result.getReason());
-            // tx.setFraudReason(result.getReason());
-        } else {
             tx.setStatus(TransactionStatus.APPROVED);
+
+            return transactionRepository.save(tx);
         }
 
-        // 3. Save the definitively evaluated transaction to the database
-        return transactionRepository.save(tx);
+        tx.setStatus(TransactionStatus.FLAGGED);
+
+        Transaction savedTransaction = transactionRepository.save(tx);
+
+        List<Transaction> recentTransactions =
+                transactionRepository.findTop10ByAccountIdOrderByTimestampDesc(
+                        savedTransaction.getAccountId()
+                );
+
+        AIFraudReport report = aiAnalysisService.analyze(
+                savedTransaction,
+                recentTransactions,
+                result.getReason()
+        );
+
+        FraudLog fraudLog = new FraudLog();
+
+        fraudLog.setTransaction(savedTransaction);
+        fraudLog.setRiskScore(report.getRiskScore());
+        fraudLog.setFraudCategory(report.getFraudCategory());
+        fraudLog.setExplanation(report.getExplanation());
+        fraudLog.setRecommendation(report.getRecommendation());
+        fraudLog.setTriggeredRule(result.getReason());
+        fraudLog.setCreatedAt(LocalDateTime.now());
+
+        fraudLogRepository.save(fraudLog);
+
+        if (report.getRiskScore() >= 7) {
+            alertService.sendFraudAlert(savedTransaction, fraudLog);
+        }
+
+        return savedTransaction;
     }
+
+    public FraudLog getFraudReport(Long id) {
+
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Transaction not found"));
+
+        return fraudLogRepository.findByTransaction(transaction)
+                .orElseThrow(() ->
+                        new RuntimeException("Fraud report not found"));
+    }
+
 }

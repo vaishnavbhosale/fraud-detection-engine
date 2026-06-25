@@ -1,8 +1,10 @@
 package com.vaishnav.fraud_detection.controller;
 
+import com.vaishnav.fraud_detection.model.FraudLog;
 import com.vaishnav.fraud_detection.model.Transaction;
 import com.vaishnav.fraud_detection.service.TransactionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,5 +17,13 @@ public class TransactionController {
     @PostMapping
     public Transaction createTransaction(@RequestBody Transaction transaction) {
         return transactionService.saveTransaction(transaction);
+    }
+    @GetMapping("/{id}/fraud-report")
+    public ResponseEntity<FraudLog> getFraudReport(@PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                transactionService.getFraudReport(id)
+        );
+
     }
 }
