@@ -35,4 +35,8 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;
+
+    @Column(name = "receiver_account_id")
+    private String receiverAccountId;
+
 }
