@@ -10,9 +10,11 @@ import com.vaishnav.fraud_detection.rules.RuleEngine;
 import com.vaishnav.fraud_detection.rules.RuleResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import com.vaishnav.fraud_detection.exception.ResourceNotFoundException;
+import com.vaishnav.fraud_detection.exception.InvalidTransactionException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,14 @@ public class TransactionService {
     private final AlertService alertService;
 
     public Transaction saveTransaction(Transaction tx) {
+
+        if (tx.getAmount() == null ||
+                tx.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new InvalidTransactionException(
+                    "Transaction amount must be greater than 0"
+            );
+        }
 
         RuleResult result = ruleEngine.evaluate(tx);
 
@@ -73,11 +83,15 @@ public class TransactionService {
 
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Transaction not found"));
+                        new ResourceNotFoundException(
+                                "Transaction not found with id: " + id
+                        ));
 
         return fraudLogRepository.findByTransaction(transaction)
                 .orElseThrow(() ->
-                        new RuntimeException("Fraud report not found"));
+                        new ResourceNotFoundException(
+                                "Fraud report not found for transaction id: " + id
+                        ));
     }
 
 }
