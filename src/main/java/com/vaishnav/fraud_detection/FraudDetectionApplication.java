@@ -9,5 +9,4 @@ public class FraudDetectionApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(FraudDetectionApplication.class, args);
 	}
-
 }

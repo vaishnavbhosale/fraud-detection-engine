@@ -24,7 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AIAnalysisService {
 
-    @Value("${gemini.api.key}")
+    @Value("${groq.api.key}")
     private String apiKey;
 
     private final RestTemplate restTemplate;
@@ -33,30 +33,26 @@ public class AIAnalysisService {
     public AIFraudReport analyze(Transaction tx,
                                  List<Transaction> recentTransactions,
                                  String triggeredRule) {
-
         try {
-
             String prompt = buildPrompt(tx, recentTransactions, triggeredRule);
 
+            // Groq uses OpenAI-compatible format
             Map<String, Object> requestBody = Map.of(
-                    "contents", List.of(
-                            Map.of(
-                                    "parts", List.of(
-                                            Map.of("text", prompt)
-                                    )
-                            )
-                    )
+                    "model", "llama-3.3-70b-versatile",
+                    "messages", List.of(
+                            Map.of("role", "user", "content", prompt)
+                    ),
+                    "temperature", 0.1
             );
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
 
             HttpEntity<Map<String, Object>> request =
                     new HttpEntity<>(requestBody, headers);
 
-            String url =
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key="
-                            + apiKey;
+            String url = "https://api.groq.com/openai/v1/chat/completions";
 
             ResponseEntity<String> response = restTemplate.postForEntity(
                     url,
@@ -66,12 +62,11 @@ public class AIAnalysisService {
 
             JsonNode root = objectMapper.readTree(response.getBody());
 
-            String aiResponse = root.path("candidates")
+            // Groq response: choices[0].message.content
+            String aiResponse = root.path("choices")
                     .get(0)
+                    .path("message")
                     .path("content")
-                    .path("parts")
-                    .get(0)
-                    .path("text")
                     .asText();
 
             aiResponse = aiResponse
@@ -82,17 +77,11 @@ public class AIAnalysisService {
             return objectMapper.readValue(aiResponse, AIFraudReport.class);
 
         } catch (JsonProcessingException e) {
-
-            log.error("Failed to parse Gemini response", e);
-
+            log.error("Failed to parse Groq response", e);
         } catch (RestClientException e) {
-
-            log.error("Failed to call Gemini API", e);
-
+            log.error("Failed to call Groq API", e);
         } catch (Exception e) {
-
             log.error("Unexpected error during AI analysis", e);
-
         }
 
         return new AIFraudReport(
@@ -110,7 +99,6 @@ public class AIAnalysisService {
         StringBuilder history = new StringBuilder();
 
         for (Transaction transaction : recentTransactions) {
-
             history.append(String.format(
                     "- ₹%s at %s, %s on %s%n",
                     transaction.getAmount(),
