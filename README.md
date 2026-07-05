@@ -1,8 +1,9 @@
 # FraudShield — AI-Powered Fraud Detection Engine
 
 > Real-time transaction fraud detection system built with Java Spring Boot, combining rule-based logic with Google Gemini AI for human-readable fraud explainability.
-
----
+## Live API
+[Base URL](https://fraud-detection-11qq.onrender.com)    
+[Swagger UI](https://fraud-detection-11qq.onrender.com/swagger-ui.html)
 
 ## Architecture
 
@@ -304,6 +305,6 @@ src/main/java/com/vaishnav/fraud_detection/
 
 ## Author
 
-**Vaishnav Bhosale**
-[GitHub](https://github.com/vaishnavbhosale) · [LinkedIn](https://www.linkedin.com/in/vaishnavbharatbhosale/) · vaishnavbharatbhosale@gmail.com
-
+**Vaishnav Bhosale** 
+[GitHub](https://github.com/vaishnavbhosale) · [LinkedIn](https://www.linkedin.com/in/vaishnavbharatbhosale/) ·
+[GMail](vaishnavbharatbhosale@gmail.com)
