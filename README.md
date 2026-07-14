@@ -288,19 +288,6 @@ src/main/java/com/vaishnav/fraud_detection/
     ├── AppConfig.java
     └── SwaggerConfig.java
 ```
-
----
-
-## Interview Talking Points
-
-- **Why Strategy Pattern?** Each rule is independently testable and the engine is closed for modification — adding a new rule is a new class, zero changes to existing code (OCP)
-- **Why `BigDecimal` for amount?** `double` has binary floating point precision errors — critical bug in financial systems processing crores of transactions
-- **Why sliding window over fixed time blocks?** Fixed blocks miss fraud that spans two windows — sliding window catches it regardless of timing
-- **Why save transaction before AI call?** `FraudLog` has a foreign key to `Transaction` — the transaction must exist in DB before creating a fraud log pointing to it
-- **Why stateless JWT over sessions?** Sessions don't scale horizontally — JWT tokens are self-contained, any server can verify them without shared state
-- **Why AI explainability?** Regulators require automated financial decisions to be explainable — "AI said no" isn't acceptable in production fintech
-- **Why graph analysis?** Per-transaction rules miss fraud rings — graph patterns detect money mules and circular transactions invisible to isolated checks
-
 ---
 
 ## Author
