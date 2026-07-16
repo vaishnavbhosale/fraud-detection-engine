@@ -35,8 +35,10 @@ public class GraphAnalysisService {
 
     public boolean hasCircularTransaction(String accountId) {
 
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
+
         return !transactionRepository
-                .findPotentialCircularAccounts(accountId)
+                .findDirectBackAndForth(accountId, cutoff)
                 .isEmpty();
     }
 }

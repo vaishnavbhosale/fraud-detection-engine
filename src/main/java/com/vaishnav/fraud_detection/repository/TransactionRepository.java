@@ -51,4 +51,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             AND t1.accountId <> :accountId
             """)
     List<String> findPotentialCircularAccounts(@Param("accountId") String accountId);
+
+    // NEW — real circular check: did this account send money to someone
+    // who sent money right back? (A -> B -> A), unlike the merchant-overlap
+    // check above which only looks at shared merchants, not actual transfers.
+    @Query("""
+            SELECT DISTINCT t1.accountId
+            FROM Transaction t1, Transaction t2
+            WHERE t1.accountId = :accountId
+            AND t1.receiverAccountId = t2.accountId
+            AND t2.receiverAccountId = :accountId
+            AND t1.timestamp > :cutoff
+            """)
+    List<String> findDirectBackAndForth(@Param("accountId") String accountId,
+                                        @Param("cutoff") LocalDateTime cutoff);
 }
