@@ -31,6 +31,16 @@ public class GraphRule implements FraudRule {
             );
         }
 
+        if (tx.getReceiverAccountId() != null
+                && graphAnalysisService
+                .getFanInAccounts()
+                .contains(tx.getReceiverAccountId())) {
+
+            return RuleResult.suspicious(
+                    "Graph analysis: fan-in pattern detected (possible money mule)"
+            );
+        }
+
         return RuleResult.clean();
     }
 }

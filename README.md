@@ -1,6 +1,6 @@
 # FraudShield — AI-Powered Fraud Detection Engine
 
-> Real-time transaction fraud detection system built with Java Spring Boot, combining rule-based logic with Google Gemini AI for human-readable fraud explainability.
+> Real-time transaction fraud detection system built with Java Spring Boot, combining rule-based logic with Groq-hosted LLaMA 3.3 70B for human-readable fraud explainability.
 ## Live API
 [Base URL](https://fraud-detection-11qq.onrender.com)    
 [Swagger UI](https://fraud-detection-11qq.onrender.com/swagger-ui.html)
@@ -17,12 +17,12 @@ POST /api/transactions
          │
          ▼
 ┌──────────────────────┐
-│     Rule Engine      │  ← Strategy Pattern: runs all 4 rules in sequence
+│     Rule Engine      │  ← Strategy Pattern: fail-fast, stops at first suspicious rule
 │  ┌─────────────────┐ │
 │  │  AmountRule     │ │  ← Flags transactions above ₹50,000
 │  │  CountryRule    │ │  ← Flags new country for an account
 │  │  VelocityRule   │ │  ← Flags 5+ transactions in 5 minutes
-│  │  GraphRule      │ │  ← Flags suspicious merchant/circular patterns
+│  │  GraphRule      │ │  ← Flags suspicious merchant/fan-in/circular patterns
 │  └─────────────────┘ │
 └──────────┬───────────┘
            │
@@ -32,7 +32,7 @@ POST /api/transactions
   APPROVED    FLAGGED
       │          │
       ▼          ▼
-   Save TX   Gemini AI Analysis
+   Save TX   Groq AI Analysis
                 │
                 ▼
           FraudLog saved
@@ -56,7 +56,7 @@ POST /api/transactions
 | Framework | Spring Boot 3 |
 | Security | Spring Security + JWT (jjwt) |
 | Database | PostgreSQL + Spring Data JPA + Hibernate |
-| AI | Google Gemini API (gemini-1.5-flash) |
+| AI | Groq API (llama-3.3-70b-versatile) |
 | Email | JavaMailSender (SMTP) |
 | Validation | Bean Validation (Jakarta) |
 | Documentation | Swagger UI (springdoc-openapi) |
@@ -69,7 +69,7 @@ POST /api/transactions
 - **Rule Engine** — Strategy Pattern with 4 independent fraud rules, each implementing a `FraudRule` interface. New rules added without modifying existing engine code (Open/Closed Principle)
 - **Sliding Window Velocity Check** — detects card-testing fraud by counting transactions in a rolling 5-minute window using Spring Data JPA derived queries
 - **Graph Analysis** — detects suspicious merchant clustering, fan-in (money mule), and circular transaction patterns using JPQL aggregate queries on existing PostgreSQL data
-- **AI Explainability** — Google Gemini AI analyzes flagged transactions returning structured risk scores (1–10), fraud categories, and natural language explanations for compliance audit trails
+- **AI Explainability** — Groq-hosted LLaMA 3.3 70B analyzes flagged transactions returning structured risk scores (1–10), fraud categories, and natural language explanations for compliance audit trails
 - **JWT Authentication** — stateless token-based auth via Spring Security, server always determines fraud status regardless of client input
 - **Real-time Alerts** — email notifications via JavaMailSender when AI risk score exceeds threshold of 7
 - **Analytics Dashboard** — aggregate fraud stats, flagged percentage, and breakdown by triggered rule
@@ -111,7 +111,7 @@ POST /api/transactions
 | `AmountRule` | Amount > ₹50,000 | High-value transaction |
 | `CountryMismatchRule` | Country differs from account history | Account takeover / travel fraud |
 | `VelocityRule` | 5+ transactions in 5 minutes (sliding window) | Card testing fraud |
-| `GraphRule` | 3+ accounts → same merchant in 1 hour | Scam vendor / money mule / circular fraud |
+| `GraphRule` | 3+ accounts → same merchant in 1 hr, OR 3+ accounts → same receiver in 30 min, OR A→B→A transfer in 24 hr | Scam vendor / money mule (fan-in) / circular fraud |
 
 ---
 
@@ -146,7 +146,7 @@ Rule engine stops at the first suspicious result — efficient and produces a cl
 - Java 17+
 - PostgreSQL
 - Maven
-- Google Gemini API key ([aistudio.google.com](https://aistudio.google.com))
+- Groq API key ([console.groq.com](https://console.groq.com))
 - Gmail App Password (for email alerts)
 
 ### Setup
@@ -163,28 +163,23 @@ CREATE DATABASE frauddb;
 ```
 
 **3. Configure environment**
+
+`application.properties` already ships in the repo pre-wired to read from environment variables — there's no `.example` file to copy. Set the following before running:
+
 ```bash
-cp src/main/resources/application.properties.example src/main/resources/application.properties
+export DB_URL=jdbc:postgresql://localhost:5432/frauddb
+export DB_USERNAME=postgres
+export DB_PASSWORD=YOUR_PASSWORD
+
+export GROQ_API_KEY=YOUR_GROQ_KEY
+
+export MAIL_USERNAME=YOUR_GMAIL
+export MAIL_PASSWORD=YOUR_APP_PASSWORD
+
+export JWT_SECRET=YOUR_JWT_SECRET_MIN_32_CHARS
 ```
 
-Fill in your credentials in `application.properties`:
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/frauddb
-spring.datasource.username=postgres
-spring.datasource.password=YOUR_PASSWORD
-
-gemini.api.key=YOUR_GEMINI_KEY
-
-spring.mail.username=YOUR_GMAIL
-spring.mail.password=YOUR_APP_PASSWORD
-alert.email=YOUR_GMAIL
-
-jwt.secret=YOUR_JWT_SECRET_MIN_32_CHARS
-jwt.expiration=86400000
-
-app.admin.username=admin
-app.admin.password=admin123
-```
+`jwt.expiration`, `alert.email` (defaults to `MAIL_USERNAME`), and the admin login (`admin` / `admin123`) are hardcoded in `application.properties` and can be edited there directly if you want to change them.
 
 **4. Run**
 ```bash
@@ -252,7 +247,8 @@ src/main/java/com/vaishnav/fraud_detection/
 ├── controller/
 │   ├── AuthController.java
 │   ├── TransactionController.java
-│   └── AnalyticsController.java
+│   ├── AnalyticsController.java
+│   └── HomeController.java         ← GET / health-check landing route
 ├── service/
 │   ├── TransactionService.java
 │   ├── AIAnalysisService.java
@@ -272,7 +268,8 @@ src/main/java/com/vaishnav/fraud_detection/
 │   ├── AIFraudReport.java
 │   ├── LoginRequest.java
 │   ├── ErrorResponse.java
-│   └── FraudStatsResponse.java
+│   ├── FraudStatsResponse.java
+│   └── TransactionStatus.java
 ├── repository/
 │   ├── TransactionRepository.java
 │   └── FraudLogRepository.java
@@ -292,6 +289,6 @@ src/main/java/com/vaishnav/fraud_detection/
 
 ## Author
 
-**Vaishnav Bhosale** 
+**Vaishnav Bhosale**
 [GitHub](https://github.com/vaishnavbhosale) · [LinkedIn](https://www.linkedin.com/in/vaishnavbharatbhosale/) ·
 [GMail](vaishnavbharatbhosale@gmail.com)
