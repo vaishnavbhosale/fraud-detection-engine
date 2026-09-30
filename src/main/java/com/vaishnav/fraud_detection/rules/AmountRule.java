@@ -12,7 +12,7 @@ public class AmountRule implements FraudRule {
     @Override
     public RuleResult evaluate(Transaction tx) {
         // compareTo returns 1 if tx.getAmount() > THRESHOLD
-        if (tx.getAmount().compareTo(THRESHOLD) > 0) {
+        if (tx.getAmount().compareTo(THRESHOLD) > 0)  {
             return RuleResult.suspicious("Amount ₹" + tx.getAmount() + " exceeds threshold");
         }
 

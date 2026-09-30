@@ -2,6 +2,7 @@ package com.vaishnav.fraud_detection.controller;
 
 import com.vaishnav.fraud_detection.model.FraudLog;
 import com.vaishnav.fraud_detection.model.Transaction;
+import com.vaishnav.fraud_detection.dto.TransactionRequest;
 import com.vaishnav.fraud_detection.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,15 +17,12 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public Transaction createTransaction(@Valid @RequestBody Transaction transaction) {
-        return transactionService.saveTransaction(transaction);
+    public Transaction createTransaction(@Valid @RequestBody TransactionRequest request) {
+        return transactionService.saveTransaction(request);
     }
+
     @GetMapping("/{id}/fraud-report")
     public ResponseEntity<FraudLog> getFraudReport(@PathVariable Long id) {
-
-        return ResponseEntity.ok(
-                transactionService.getFraudReport(id)
-        );
-
+        return ResponseEntity.ok(transactionService.getFraudReport(id));
     }
 }
