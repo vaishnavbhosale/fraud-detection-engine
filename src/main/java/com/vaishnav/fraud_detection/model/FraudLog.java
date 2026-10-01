@@ -35,6 +35,8 @@ public class FraudLog {
 
     private String ruleNames;
 
+    private Integer ruleScore;
+
     private LocalDateTime createdAt;
 
     public void error(String s, Exception e) {

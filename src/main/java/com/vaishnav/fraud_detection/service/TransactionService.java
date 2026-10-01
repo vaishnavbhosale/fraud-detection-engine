@@ -85,6 +85,7 @@ public class TransactionService {
         fraudLog.setRecommendation(report.getRecommendation());
         fraudLog.setTriggeredRule(reasonText);
         fraudLog.setRuleNames(String.join(",", risk.getRuleNames()));
+        fraudLog.setRuleScore(risk.getTotalScore());
         fraudLog.setCreatedAt(LocalDateTime.now());
 
         fraudLogRepository.save(fraudLog);
