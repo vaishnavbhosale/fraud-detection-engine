@@ -49,8 +49,9 @@ class TransactionServiceTest {
 
     @Test
     void shouldSetTimestampOnServerAndNotSetId() {
+
         when(ruleEngine.assess(any(Transaction.class)))
-                .thenReturn(new RiskResult(0, List.of(), TransactionStatus.APPROVED));
+                .thenReturn(new RiskResult(0, List.of(), List.of(), TransactionStatus.APPROVED));
 
         TransactionRequest request = new TransactionRequest();
         request.setAccountId("ACC001");

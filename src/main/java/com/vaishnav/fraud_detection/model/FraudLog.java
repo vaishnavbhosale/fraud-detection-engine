@@ -33,6 +33,8 @@ public class FraudLog {
 
     private String triggeredRule;
 
+    private String ruleNames;
+
     private LocalDateTime createdAt;
 
     public void error(String s, Exception e) {

@@ -43,13 +43,10 @@ public class AnalyticsController {
 
         Map<String, Long> fraudByRule = new HashMap<>();
 
-        for (Object[] row : fraudLogRepository.countByTriggeredRule()) {
-
-            String rule = (String) row[0];
-
-            Long count = (Long) row[1];
-
-            fraudByRule.put(rule, count);
+        for (String names : fraudLogRepository.findAllRuleNames()) {
+            for (String name : names.split(",")) {
+                fraudByRule.put(name, fraudByRule.getOrDefault(name, 0L) + 1);
+            }
         }
 
         FraudStatsResponse response = new FraudStatsResponse(

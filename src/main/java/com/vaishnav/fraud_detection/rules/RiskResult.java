@@ -11,6 +11,7 @@ import java.util.List;
 public class RiskResult {
 
     private int totalScore;
+    private List<String> ruleNames;
     private List<String> reasons;
     private TransactionStatus status;
 }

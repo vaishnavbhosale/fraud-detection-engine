@@ -6,4 +6,6 @@ public interface FraudRule {
     RuleResult evaluate(Transaction tx);
 
     int getWeight();
+
+    String getName();
 }

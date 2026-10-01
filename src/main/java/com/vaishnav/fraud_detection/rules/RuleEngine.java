@@ -32,6 +32,7 @@ public class RuleEngine {
     public RiskResult assess(Transaction tx) {
         int totalScore = 0;
         List<String> reasons = new ArrayList<>();
+        List<String> ruleNames = new ArrayList<>();
 
         for (FraudRule rule : rules) {
             RuleResult result = rule.evaluate(tx);
@@ -39,12 +40,13 @@ public class RuleEngine {
             if (result.isSuspicious()) {
                 totalScore += rule.getWeight();
                 reasons.add(result.getReason());
+                ruleNames.add(rule.getName());
             }
         }
 
         TransactionStatus status = decideStatus(totalScore);
 
-        return new RiskResult(totalScore, reasons, status);
+        return new RiskResult(totalScore, ruleNames,reasons, status);
     }
 
     private TransactionStatus decideStatus(int totalScore) {
