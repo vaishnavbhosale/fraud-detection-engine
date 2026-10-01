@@ -30,12 +30,15 @@ public class AnalyticsController {
         long totalFlagged =
                 transactionRepository.countByStatus(TransactionStatus.FLAGGED);
 
+        long totalBlocked =
+                transactionRepository.countByStatus(TransactionStatus.BLOCKED);
+
         long totalApproved =
                 transactionRepository.countByStatus(TransactionStatus.APPROVED);
 
         double flaggedPercentage =
                 totalTransactions > 0
-                        ? (totalFlagged * 100.0) / totalTransactions
+                        ? ((totalFlagged + totalBlocked) * 100.0) / totalTransactions
                         : 0.0;
 
         Map<String, Long> fraudByRule = new HashMap<>();
@@ -52,6 +55,7 @@ public class AnalyticsController {
         FraudStatsResponse response = new FraudStatsResponse(
                 totalTransactions,
                 totalFlagged,
+                totalBlocked,
                 totalApproved,
                 flaggedPercentage,
                 fraudByRule

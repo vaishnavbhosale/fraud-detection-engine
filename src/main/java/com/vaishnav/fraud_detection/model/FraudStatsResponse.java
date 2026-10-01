@@ -15,6 +15,8 @@ public class FraudStatsResponse {
 
     private long totalFlagged;
 
+    private long totalBlocked;
+
     private long totalApproved;
 
     private double flaggedPercentage;
