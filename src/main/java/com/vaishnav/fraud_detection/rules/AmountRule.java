@@ -18,4 +18,9 @@ public class AmountRule implements FraudRule {
 
         return RuleResult.clean();
     }
+
+    @Override
+    public int getWeight() {
+        return 30;
+    }
 }

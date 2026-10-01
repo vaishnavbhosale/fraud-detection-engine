@@ -14,6 +14,7 @@ import com.vaishnav.fraud_detection.rules.RuleEngine;
 import com.vaishnav.fraud_detection.rules.RuleResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.vaishnav.fraud_detection.rules.RiskResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,18 +52,18 @@ public class TransactionService {
         // the server sets the time, not the client
         tx.setTimestamp(LocalDateTime.now());
 
-        RuleResult result = ruleEngine.evaluate(tx);
+        RiskResult risk = ruleEngine.assess(tx);
 
-        if (!result.isSuspicious()) {
+        tx.setStatus(risk.getStatus());
 
-            tx.setStatus(TransactionStatus.APPROVED);
-
+        if (risk.getStatus() == TransactionStatus.APPROVED) {
             return transactionRepository.save(tx);
         }
 
-        tx.setStatus(TransactionStatus.FLAGGED);
-
         Transaction savedTransaction = transactionRepository.save(tx);
+
+
+        String reasonText = String.join("; ", risk.getReasons());
 
         List<Transaction> recentTransactions =
                 transactionRepository.findTop10ByAccountIdOrderByTimestampDesc(
@@ -72,7 +73,7 @@ public class TransactionService {
         AIFraudReport report = aiAnalysisService.analyze(
                 savedTransaction,
                 recentTransactions,
-                result.getReason()
+                reasonText
         );
 
         FraudLog fraudLog = new FraudLog();
@@ -82,7 +83,7 @@ public class TransactionService {
         fraudLog.setFraudCategory(report.getFraudCategory());
         fraudLog.setExplanation(report.getExplanation());
         fraudLog.setRecommendation(report.getRecommendation());
-        fraudLog.setTriggeredRule(result.getReason());
+        fraudLog.setTriggeredRule(reasonText);
         fraudLog.setCreatedAt(LocalDateTime.now());
 
         fraudLogRepository.save(fraudLog);

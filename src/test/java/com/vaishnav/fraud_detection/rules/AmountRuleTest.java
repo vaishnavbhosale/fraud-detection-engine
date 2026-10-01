@@ -66,4 +66,8 @@ class AmountRuleTest {
                 result.getReason()
         );
     }
+    @Test
+    void weightShouldBeThirty() {
+        assertEquals(30, amountRule.getWeight());
+    }
 }

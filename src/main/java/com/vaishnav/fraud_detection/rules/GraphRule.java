@@ -43,4 +43,8 @@ public class GraphRule implements FraudRule {
 
         return RuleResult.clean();
     }
+    @Override
+    public int getWeight() {
+        return 40;
+    }
 }

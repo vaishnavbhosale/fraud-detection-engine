@@ -34,4 +34,8 @@ public class VelocityRule implements FraudRule {
         // 4. Volume is within normal limits
         return RuleResult.clean();
     }
+    @Override
+    public int getWeight() {
+        return 30;
+    }
 }

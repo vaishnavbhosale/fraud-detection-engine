@@ -3,6 +3,7 @@ package com.vaishnav.fraud_detection.rules;
 
 import com.vaishnav.fraud_detection.model.Transaction;
 import com.vaishnav.fraud_detection.dto.TransactionRequest;
+import com.vaishnav.fraud_detection.model.TransactionStatus;
 import com.vaishnav.fraud_detection.repository.FraudLogRepository;
 import com.vaishnav.fraud_detection.repository.TransactionRepository;
 import com.vaishnav.fraud_detection.rules.RuleEngine;
@@ -18,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,7 +49,8 @@ class TransactionServiceTest {
 
     @Test
     void shouldSetTimestampOnServerAndNotSetId() {
-        when(ruleEngine.evaluate(any(Transaction.class))).thenReturn(RuleResult.clean());
+        when(ruleEngine.assess(any(Transaction.class)))
+                .thenReturn(new RiskResult(0, List.of(), TransactionStatus.APPROVED));
 
         TransactionRequest request = new TransactionRequest();
         request.setAccountId("ACC001");

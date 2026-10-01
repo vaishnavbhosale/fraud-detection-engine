@@ -39,4 +39,8 @@ public class CountryMismatchRule implements FraudRule {
         // 4. Countries match
         return RuleResult.clean();
     }
+    @Override
+    public int getWeight() {
+        return 20;
+    }
 }
