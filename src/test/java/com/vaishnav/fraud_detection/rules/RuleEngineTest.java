@@ -4,7 +4,6 @@ import com.vaishnav.fraud_detection.model.Transaction;
 import com.vaishnav.fraud_detection.model.TransactionStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,79 +21,6 @@ class RuleEngineTest {
     @Mock
     private FraudRule ruleB;
 
-    @Mock
-    private FraudRule firstRule;
-
-    @Mock
-    private FraudRule secondRule;
-
-    @InjectMocks
-    private RuleEngine ruleEngine;
-
-    @Test
-    void shouldReturnSuspiciousWhenAnyRuleDetectsFraud() {
-        Transaction tx = new Transaction();
-
-        RuleResult cleanResult = RuleResult.clean();
-        RuleResult suspiciousResult =
-                RuleResult.suspicious("Suspicious transaction");
-
-        when(firstRule.evaluate(tx)).thenReturn(cleanResult);
-        when(secondRule.evaluate(tx)).thenReturn(suspiciousResult);
-
-        RuleEngine engine = new RuleEngine(
-                List.of(firstRule, secondRule)
-        );
-
-        RuleResult result = engine.evaluate(tx);
-
-        assertTrue(result.isSuspicious());
-        assertEquals(
-                "Suspicious transaction",
-                result.getReason()
-        );
-    }
-
-    @Test
-    void shouldReturnCleanWhenAllRulesAreClean() {
-        Transaction tx = new Transaction();
-
-        when(firstRule.evaluate(tx))
-                .thenReturn(RuleResult.clean());
-
-        when(secondRule.evaluate(tx))
-                .thenReturn(RuleResult.clean());
-
-        RuleEngine engine = new RuleEngine(
-                List.of(firstRule, secondRule)
-        );
-
-        RuleResult result = engine.evaluate(tx);
-
-        assertFalse(result.isSuspicious());
-    }
-
-    @Test
-    void shouldStopEvaluatingRulesAfterSuspiciousResult() {
-        Transaction tx = new Transaction();
-
-        RuleResult suspiciousResult =
-                RuleResult.suspicious("Fraud detected");
-
-        when(firstRule.evaluate(tx))
-                .thenReturn(suspiciousResult);
-
-        RuleEngine engine = new RuleEngine(
-                List.of(firstRule, secondRule)
-        );
-
-        RuleResult result = engine.evaluate(tx);
-
-        assertTrue(result.isSuspicious());
-
-        verify(firstRule).evaluate(tx);
-        verify(secondRule, never()).evaluate(tx);
-    }
     @Test
     void shouldAddUpWeightsWhenTwoRulesFire() {
         Transaction tx = new Transaction();
@@ -102,8 +28,10 @@ class RuleEngineTest {
         // both fake rules say "suspicious", and each is worth 30 points
         when(ruleA.evaluate(tx)).thenReturn(RuleResult.suspicious("rule A flagged it"));
         when(ruleA.getWeight()).thenReturn(30);
+        when(ruleA.getName()).thenReturn("RULE_A");
         when(ruleB.evaluate(tx)).thenReturn(RuleResult.suspicious("rule B flagged it"));
         when(ruleB.getWeight()).thenReturn(30);
+        when(ruleB.getName()).thenReturn("RULE_B");
 
         RuleEngine engine = new RuleEngine(List.of(ruleA, ruleB));
 
@@ -111,8 +39,14 @@ class RuleEngineTest {
 
         assertEquals(60, result.getTotalScore());
         assertEquals(2, result.getReasons().size());
+        assertEquals(List.of("RULE_A", "RULE_B"), result.getRuleNames());
         assertEquals(TransactionStatus.BLOCKED, result.getStatus());
+
+        // both rules were asked, so the engine did not stop early
+        verify(ruleA).evaluate(tx);
+        verify(ruleB).evaluate(tx);
     }
+
     @Test
     void shouldFlagWhenOnlyOneRuleFires() {
         Transaction tx = new Transaction();
@@ -120,6 +54,7 @@ class RuleEngineTest {
         // rule A fires (30 points), rule B says clean
         when(ruleA.evaluate(tx)).thenReturn(RuleResult.suspicious("rule A flagged it"));
         when(ruleA.getWeight()).thenReturn(30);
+        when(ruleA.getName()).thenReturn("RULE_A");
         when(ruleB.evaluate(tx)).thenReturn(RuleResult.clean());
 
         RuleEngine engine = new RuleEngine(List.of(ruleA, ruleB));
@@ -128,11 +63,12 @@ class RuleEngineTest {
 
         assertEquals(30, result.getTotalScore());
         assertEquals(1, result.getReasons().size());
+        assertEquals(List.of("RULE_A"), result.getRuleNames());
         assertEquals(TransactionStatus.FLAGGED, result.getStatus());
     }
 
     @Test
-    void shouldApproveWhenNoRuleFires(){
+    void shouldApproveWhenNoRuleFires() {
         Transaction tx = new Transaction();
 
         when(ruleA.evaluate(tx)).thenReturn(RuleResult.clean());
@@ -141,9 +77,9 @@ class RuleEngineTest {
         RuleEngine engine = new RuleEngine(List.of(ruleA, ruleB));
 
         RiskResult result = engine.assess(tx);
+
         assertEquals(0, result.getTotalScore());
         assertEquals(0, result.getReasons().size());
         assertEquals(TransactionStatus.APPROVED, result.getStatus());
-
     }
 }
