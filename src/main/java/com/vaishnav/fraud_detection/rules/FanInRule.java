@@ -7,29 +7,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class GraphRule implements FraudRule {
+public class FanInRule implements FraudRule {
 
     private final GraphAnalysisService graphAnalysisService;
 
     @Override
     public RuleResult evaluate(Transaction tx) {
-
-        if (graphAnalysisService
-                .getSuspiciousMerchants()
-                .contains(tx.getMerchant())) {
-
-            return RuleResult.suspicious(
-                    "Graph analysis: suspicious merchant"
-            );
-        }
-
-        if (graphAnalysisService
-                .hasCircularTransaction(tx.getAccountId())) {
-
-            return RuleResult.suspicious(
-                    "Graph analysis: circular transactions detected"
-            );
-        }
 
         if (tx.getReceiverAccountId() != null
                 && graphAnalysisService
@@ -37,18 +20,21 @@ public class GraphRule implements FraudRule {
                 .contains(tx.getReceiverAccountId())) {
 
             return RuleResult.suspicious(
-                    "Graph analysis: fan-in pattern detected (possible money mule)"
+                    "Fan-in check: many accounts are sending money to "
+                            + tx.getReceiverAccountId() + " (possible money mule)"
             );
         }
 
         return RuleResult.clean();
     }
+
     @Override
     public int getWeight() {
-        return 40;
+        return 25;
     }
+
     @Override
     public String getName() {
-        return "GRAPH";
+        return "FAN_IN";
     }
 }

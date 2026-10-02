@@ -23,12 +23,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     long countByStatus(TransactionStatus status);
 
     @Query("""
-            SELECT t.merchant, COUNT(DISTINCT t.accountId)
-            FROM Transaction t
-            WHERE t.timestamp > :cutoff
-            GROUP BY t.merchant
-            HAVING COUNT(DISTINCT t.accountId) >= 3
-            """)
+        SELECT t.merchant, COUNT(DISTINCT t.accountId)
+        FROM Transaction t
+        WHERE t.timestamp > :cutoff
+        AND t.status IN (com.vaishnav.fraud_detection.model.TransactionStatus.FLAGGED,
+                         com.vaishnav.fraud_detection.model.TransactionStatus.BLOCKED)
+        GROUP BY t.merchant
+        HAVING COUNT(DISTINCT t.accountId) >= 3
+        """)
     List<Object[]> findSuspiciousMerchants(@Param("cutoff") LocalDateTime cutoff);
 
     @Query("""
@@ -65,4 +67,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             """)
     List<String> findDirectBackAndForth(@Param("accountId") String accountId,
                                         @Param("cutoff") LocalDateTime cutoff);
+
+
 }
