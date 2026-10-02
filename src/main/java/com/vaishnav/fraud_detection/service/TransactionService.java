@@ -11,7 +11,6 @@ import com.vaishnav.fraud_detection.model.TransactionStatus;
 import com.vaishnav.fraud_detection.repository.FraudLogRepository;
 import com.vaishnav.fraud_detection.repository.TransactionRepository;
 import com.vaishnav.fraud_detection.rules.RuleEngine;
-import com.vaishnav.fraud_detection.rules.RuleResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.vaishnav.fraud_detection.rules.RiskResult;
@@ -19,6 +18,7 @@ import com.vaishnav.fraud_detection.rules.RiskResult;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +47,10 @@ public class TransactionService {
     }
 
     public Transaction saveTransaction(TransactionRequest request) {
+        return saveTransaction(request, null);
+    }
+
+    public Transaction saveTransaction(TransactionRequest request, String idempotencyKey) {
 
         if (request.getAmount() == null ||
                 request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -64,14 +68,24 @@ public class TransactionService {
         tx.setCurrency(request.getCurrency());
         tx.setMerchant(request.getMerchant());
         tx.setCountry(request.getCountry());
-
-
+        tx.setIdempotencyKey(idempotencyKey);
 
         RiskResult risk;
         Transaction savedTransaction;
 
-// only one request per account can be inside this block at a time
+        // only one request per account can be inside this block at a time
         synchronized (lockFor(request.getAccountId())) {
+
+            // if this key was already used, return the transaction we saved the first time
+            if (idempotencyKey != null) {
+                Optional<Transaction> existing =
+                        transactionRepository.findByIdempotencyKey(idempotencyKey);
+
+                if (existing.isPresent()) {
+                    return existing.get();
+                }
+            }
+
             // the server sets the time, not the client
             tx.setTimestamp(LocalDateTime.now());
 
@@ -85,7 +99,7 @@ public class TransactionService {
             return savedTransaction;
         }
 
-// join all the reasons into one text
+        // join all the reasons into one text
         String reasonText = String.join("; ", risk.getReasons());
 
         List<Transaction> recentTransactions =

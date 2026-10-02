@@ -17,8 +17,10 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public Transaction createTransaction(@Valid @RequestBody TransactionRequest request) {
-        return transactionService.saveTransaction(request);
+    public Transaction createTransaction(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody TransactionRequest request) {
+        return transactionService.saveTransaction(request, idempotencyKey);
     }
 
     @GetMapping("/{id}/fraud-report")

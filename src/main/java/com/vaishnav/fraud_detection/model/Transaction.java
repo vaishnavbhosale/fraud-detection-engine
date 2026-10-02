@@ -51,6 +51,9 @@ public class Transaction {
     @Column(name = "receiver_account_id")
     private String receiverAccountId;
 
+    @Column(name = "idempotency_key", unique = true, length = 100)
+    private String idempotencyKey;
+
 }
 
 

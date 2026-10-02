@@ -21,6 +21,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findTop10ByAccountIdOrderByTimestampDesc(String accountId);
 
     long countByStatus(TransactionStatus status);
+    Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
     @Query("""
         SELECT t.merchant, COUNT(DISTINCT t.accountId)
@@ -67,6 +68,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             """)
     List<String> findDirectBackAndForth(@Param("accountId") String accountId,
                                         @Param("cutoff") LocalDateTime cutoff);
+
+
 
 
 }
