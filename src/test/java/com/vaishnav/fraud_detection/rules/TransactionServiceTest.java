@@ -1,6 +1,7 @@
 package com.vaishnav.fraud_detection.rules;
 
 
+import com.vaishnav.fraud_detection.model.AIFraudReport;
 import com.vaishnav.fraud_detection.model.Transaction;
 import com.vaishnav.fraud_detection.dto.TransactionRequest;
 import com.vaishnav.fraud_detection.model.TransactionStatus;
@@ -23,8 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -69,5 +69,65 @@ class TransactionServiceTest {
 
         assertNull(savedTx.getId());
         assertNotNull(savedTx.getTimestamp());
+    }
+    private TransactionRequest makeRequest() {
+        TransactionRequest request = new TransactionRequest();
+        request.setAccountId("ACC001");
+        request.setAmount(new BigDecimal("95000"));
+        request.setCurrency("INR");
+        request.setMerchant("Amazon");
+        request.setCountry("IN");
+        return request;
+    }
+
+    @Test
+    void shouldSendAlertWhenRulesSayBlockedEvenIfAiScoreIsLow() {
+        Transaction saved = new Transaction();
+        saved.setAccountId("ACC001");
+
+        when(ruleEngine.assess(any(Transaction.class)))
+                .thenReturn(new RiskResult(60, List.of("AMOUNT", "VELOCITY"),
+                        List.of("reason one", "reason two"), TransactionStatus.BLOCKED));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
+        when(aiAnalysisService.analyze(any(), any(), any()))
+                .thenReturn(new AIFraudReport(2, "NONE", "looks fine", "APPROVE"));
+
+        transactionService.saveTransaction(makeRequest());
+
+        verify(alertService).sendFraudAlert(any(), any());
+    }
+
+    @Test
+    void shouldNotSendAlertWhenFlaggedAndAiScoreIsLow() {
+        Transaction saved = new Transaction();
+        saved.setAccountId("ACC001");
+
+        when(ruleEngine.assess(any(Transaction.class)))
+                .thenReturn(new RiskResult(30, List.of("AMOUNT"),
+                        List.of("reason one"), TransactionStatus.FLAGGED));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
+        when(aiAnalysisService.analyze(any(), any(), any()))
+                .thenReturn(new AIFraudReport(2, "NONE", "looks fine", "APPROVE"));
+
+        transactionService.saveTransaction(makeRequest());
+
+        verify(alertService, never()).sendFraudAlert(any(), any());
+    }
+
+    @Test
+    void shouldSendAlertWhenFlaggedAndAiScoreIsHigh() {
+        Transaction saved = new Transaction();
+        saved.setAccountId("ACC001");
+
+        when(ruleEngine.assess(any(Transaction.class)))
+                .thenReturn(new RiskResult(30, List.of("AMOUNT"),
+                        List.of("reason one"), TransactionStatus.FLAGGED));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
+        when(aiAnalysisService.analyze(any(), any(), any()))
+                .thenReturn(new AIFraudReport(9, "FRAUD", "very risky", "BLOCK"));
+
+        transactionService.saveTransaction(makeRequest());
+
+        verify(alertService).sendFraudAlert(any(), any());
     }
 }

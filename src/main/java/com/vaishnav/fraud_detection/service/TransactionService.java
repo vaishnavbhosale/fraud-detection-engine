@@ -127,7 +127,11 @@ public class TransactionService {
 
         fraudLogRepository.save(fraudLog);
 
-        if (report.getRiskScore() >= 7) {
+        boolean aiSaysHighRisk = report.getRiskScore() >= 7;
+        boolean rulesSayBlocked = risk.getStatus() == TransactionStatus.BLOCKED;
+
+// the alert must not depend on the AI alone, because the AI can be fooled
+        if (aiSaysHighRisk || rulesSayBlocked) {
             alertService.sendFraudAlert(savedTransaction, fraudLog);
         }
 
