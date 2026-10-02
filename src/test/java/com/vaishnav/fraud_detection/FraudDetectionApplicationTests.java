@@ -1,15 +1,14 @@
 package com.vaishnav.fraud_detection;
 
-import org.junit.jupiter.api.Disabled;
+import org.springframework.test.context.ActiveProfiles;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-@Disabled("Needs a real database; will fix with a test database later")
+@ActiveProfiles("test")
 class FraudDetectionApplicationTests {
 
 	@Test
 	void contextLoads() {
 	}
-
 }

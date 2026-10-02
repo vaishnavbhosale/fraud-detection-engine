@@ -30,6 +30,22 @@ public class TransactionService {
     private final AIAnalysisService aiAnalysisService;
     private final AlertService alertService;
 
+    private static final int LOCK_COUNT = 64;
+
+    private final Object[] accountLocks = createLocks();
+
+    private static Object[] createLocks() {
+        Object[] locks = new Object[LOCK_COUNT];
+        for (int i = 0; i < LOCK_COUNT; i++) {
+            locks[i] = new Object();
+        }
+        return locks;
+    }
+
+    private Object lockFor(String accountId) {
+        return accountLocks[Math.floorMod(accountId.hashCode(), LOCK_COUNT)];
+    }
+
     public Transaction saveTransaction(TransactionRequest request) {
 
         if (request.getAmount() == null ||
@@ -49,20 +65,27 @@ public class TransactionService {
         tx.setMerchant(request.getMerchant());
         tx.setCountry(request.getCountry());
 
-        // the server sets the time, not the client
-        tx.setTimestamp(LocalDateTime.now());
 
-        RiskResult risk = ruleEngine.assess(tx);
 
-        tx.setStatus(risk.getStatus());
+        RiskResult risk;
+        Transaction savedTransaction;
 
-        if (risk.getStatus() == TransactionStatus.APPROVED) {
-            return transactionRepository.save(tx);
+// only one request per account can be inside this block at a time
+        synchronized (lockFor(request.getAccountId())) {
+            // the server sets the time, not the client
+            tx.setTimestamp(LocalDateTime.now());
+
+            // count, decide and save happen together, with no gap for another request
+            risk = ruleEngine.assess(tx);
+            tx.setStatus(risk.getStatus());
+            savedTransaction = transactionRepository.save(tx);
         }
 
-        Transaction savedTransaction = transactionRepository.save(tx);
+        if (risk.getStatus() == TransactionStatus.APPROVED) {
+            return savedTransaction;
+        }
 
-
+// join all the reasons into one text
         String reasonText = String.join("; ", risk.getReasons());
 
         List<Transaction> recentTransactions =
