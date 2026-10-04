@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FraudShield</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f9; color: #1f2933; }
+  header { background: #1f2937; color: #fff; padding: 14px 24px; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
+  header button { background: transparent; color: #fff; border: 1px solid #9ca3af; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  main { max-width: 900px; margin: 24px auto; padding: 0 16px; display: grid; gap: 16px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  label { display: block; font-size: 13px; color: #52606d; margin-bottom: 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd2d9; border-radius: 6px; font-size: 14px; }
+  button.primary { margin-top: 14px; background: #2563eb; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
+  button.primary:disabled { background: #93b4f5; cursor: wait; }
+  .error { color: #b91c1c; margin-top: 10px; min-height: 18px; }
+  .hidden { display: none; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; color: #fff; font-weight: 600; }
+  .APPROVED { background: #16a34a; } .FLAGGED { background: #d97706; } .BLOCKED { background: #dc2626; }
+  .row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid #eef0f3; }
+  .row span:first-child { width: 150px; color: #52606d; flex-shrink: 0; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .stat { background: #f4f6f9; border-radius: 8px; padding: 12px; text-align: center; }
+  .stat b { display: block; font-size: 22px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span>FraudShield</span>
+  <button id="logoutBtn" class="hidden" onclick="logout()">Log out</button>
+</header>
+
+<main>
+
+  <section class="card" id="loginCard">
+    <h2>Log in</h2>
+    <div class="grid">
+      <div><label for="user">Username</label><input id="user" value="admin"></div>
+      <div><label for="pass">Password</label><input id="pass" type="password" value="admin123"></div>
+    </div>
+    <button class="primary" onclick="login()">Log in</button>
+    <div class="error" id="loginError"></div>
+  </section>
+
+  <section class="card hidden" id="sendCard">
+    <h2>Send a transaction</h2>
+    <div class="grid">
+      <div><label for="accountId">Account ID</label><input id="accountId" value="ACC001"></div>
+      <div><label for="receiverAccountId">Receiver account (optional)</label><input id="receiverAccountId"></div>
+      <div><label for="amount">Amount</label><input id="amount" type="number" value="95000"></div>
+      <div><label for="currency">Currency</label><input id="currency" value="INR"></div>
+      <div><label for="merchant">Merchant</label><input id="merchant" value="Amazon"></div>
+      <div><label for="country">Country</label><input id="country" value="IN"></div>
+    </div>
+    <button class="primary" id="sendBtn" onclick="sendTransaction()">Send</button>
+    <div class="error" id="sendError"></div>
+  </section>
+
+  <section class="card hidden" id="resultCard">
+    <h2>Result</h2>
+    <div id="result"></div>
+  </section>
+
+  <section class="card hidden" id="statsCard">
+    <h2>Statistics</h2>
+    <div class="stats" id="statsNumbers"></div>
+    <div id="statsRules"></div>
+    <button class="primary" onclick="loadStats()">Refresh</button>
+  </section>
+
+</main>
+
+<script>
+  // the token is kept only in memory, so closing the tab logs you out
+  let token = null;
+  const $ = id => document.getElementById(id);
+
+  async function api(path, options = {}) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const response = await fetch(path, Object.assign({}, options, { headers }));
+    const text = await response.text();
+
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
+
+    if (!response.ok) {
+      const message = (data && (data.message || data.error)) ||
+        ('Request failed (' + response.status + '). Try logging in again.');
+      throw new Error(message);
+    }
+    return data;
+  }
+
+  function show(id, visible) { $(id).classList.toggle('hidden', !visible); }
+
+  function makeRow(label, value) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const a = document.createElement('span');
+    const b = document.createElement('span');
+    a.textContent = label;
+    b.textContent = value;
+    row.appendChild(a);
+    row.appendChild(b);
+    return row;
+  }
+
+  async function login() {
+    $('loginError').textContent = '';
+    try {
+      const data = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: $('user').value, password: $('pass').value })
+      });
+      token = data.token;
+      show('loginCard', false);
+      show('sendCard', true);
+      show('statsCard', true);
+      show('logoutBtn', true);
+      loadStats();
+    } catch (e) {
+      $('loginError').textContent = e.message;
+    }
+  }
+
+  function logout() {
+    token = null;
+    show('loginCard', true);
+    show('sendCard', false);
+    show('resultCard', false);
+    show('statsCard', false);
+    show('logoutBtn', false);
+  }
+
+  async function sendTransaction() {
+    $('sendError').textContent = '';
+    $('sendBtn').disabled = true;
+
+    const body = {
+      accountId: $('accountId').value,
+      amount: Number($('amount').value),
+      currency: $('currency').value,
+      merchant: $('merchant').value,
+      country: $('country').value
+    };
+    if ($('receiverAccountId').value) body.receiverAccountId = $('receiverAccountId').value;
+
+    // a new key for every click, so a double click on the network does not create two payments
+    const key = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random();
+
+    try {
+      const tx = await api('/api/transactions', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': key },
+        body: JSON.stringify(body)
+      });
+
+      const result = $('result');
+      result.textContent = '';
+
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + tx.status;
+      badge.textContent = tx.status;
+      const top = document.createElement('div');
+      top.appendChild(badge);
+      result.appendChild(top);
+
+      result.appendChild(makeRow('Transaction id', tx.id));
+      result.appendChild(makeRow('Amount', tx.amount + ' ' + tx.currency));
+
+      if (tx.status !== 'APPROVED') {
+        const report = await api('/api/transactions/' + tx.id + '/fraud-report');
+        result.appendChild(makeRow('Rules that fired', (report.ruleNames || '').split(',').join(', ')));
+        result.appendChild(makeRow('Rule score', report.ruleScore));
+        result.appendChild(makeRow('Reasons', report.triggeredRule));
+        result.appendChild(makeRow('AI risk score', report.riskScore + ' / 10'));
+        result.appendChild(makeRow('AI category', report.fraudCategory));
+        result.appendChild(makeRow('AI explanation', report.explanation));
+        result.appendChild(makeRow('AI recommendation', report.recommendation));
+      }
+
+      show('resultCard', true);
+      loadStats();
+    } catch (e) {
+      $('sendError').textContent = e.message;
+    } finally {
+      $('sendBtn').disabled = false;
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const stats = await api('/api/analytics/fraud-stats');
+
+      const numbers = $('statsNumbers');
+      numbers.textContent = '';
+      [
+        ['Total', stats.totalTransactions],
+        ['Approved', stats.totalApproved],
+        ['Flagged', stats.totalFlagged],
+        ['Blocked', stats.totalBlocked],
+        ['Flagged %', Number(stats.flaggedPercentage).toFixed(1) + '%']
+      ].forEach(([label, value]) => {
+        const box = document.createElement('div');
+        box.className = 'stat';
+        const big = document.createElement('b');
+        big.textContent = value;
+        box.appendChild(big);
+        box.appendChild(document.createTextNode(label));
+        numbers.appendChild(box);
+      });
+
+      const rules = $('statsRules');
+      rules.textContent = '';
+      Object.entries(stats.fraudByRule || {}).forEach(([name, count]) => {
+        rules.appendChild(makeRow(name, count));
+      });
+    } catch (e) {
+      $('statsRules').textContent = e.message;
+    }
+  }
+</script>
+
+</body>
+</html>
