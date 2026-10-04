@@ -4,9 +4,33 @@
 
 ## Live API
 
-[Base URL](https://fraud-detection-11qq.onrender.com) · [Swagger UI](https://fraud-detection-11qq.onrender.com/swagger-ui.html)
+[Base URL](https://fraudshield-5cu6.onrender.com)
+[Swagger UI](https://fraudshield-5cu6.onrender.com/swagger-ui.html)
+[Web demo](https://fraudshield-5cu6.onrender.com/app.html)
 
 The demo runs on a free Render instance, so the first request after a quiet period can take 30–60 seconds while it wakes up.
+
+---
+
+## Web demo
+
+A small single-page frontend is served by the Spring Boot app itself, so there is no separate frontend to build or deploy. It lives in `src/main/resources/static/app.html` and is opened at `/app.html`.
+
+What it does:
+- Log in with the demo admin account (the fields are pre-filled).
+- Send a transaction and see the result as a colored badge: green APPROVED, amber FLAGGED, red BLOCKED.
+- For flagged or blocked transactions it also shows the rules that fired, the rule score, and the AI risk score, category, explanation and recommendation.
+- Live statistics: totals, flagged percentage and a count per rule.
+
+Things to try:
+
+| Send | Expected |
+|---|---|
+| Amount 500, a new account | APPROVED |
+| Amount 95000 | FLAGGED (amount rule, 30 points) |
+| Amount 95000 about 7 times quickly on the same account | BLOCKED (amount + velocity, 60 points) |
+
+Notes: the login token is kept only in memory, so closing the tab logs you out. Text coming from the server is added to the page with `textContent`, not `innerHTML`, so a malicious merchant name cannot inject script. Every click sends a fresh `Idempotency-Key`.
 
 ---
 
@@ -270,6 +294,7 @@ src/main/java/com/vaishnav/fraud_detection/
 └── config/        AppConfig (RestTemplate with timeouts), SwaggerConfig
 
 src/test/          unit, integration, concurrency and timeout tests (H2 profile in resources/)
+src/main/resources/static/   app.html (the web demo page)
 evaluation/        load-test.jmx (JMeter plan)
 ```
 
@@ -288,6 +313,7 @@ Design notes: each rule is its own class implementing `FraudRule` (Strategy patt
 - **The admin login (`admin` / `admin123`) is a demo credential** kept in `application.properties`; a real deployment needs a user store and hashed passwords.
 - **`ddl-auto=update`** is convenient for a demo; production should use migrations (for example Flyway).
 - **The load test is a local baseline** (see the note under Performance).
+- **The web page is a minimal demo:** it has no registration, the demo admin credentials are pre-filled, and the token is not persisted.
 
 ---
 
