@@ -1,0 +1,25 @@
+[33meffa163[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m test: add unit tests for fraud rules
+[33m3a6ddcc[m fix: use TransactionRequest DTO and set timestamp on server
+[33m45eb828[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: wire up fan-in detection in GraphRule
+[33m1bf3d04[m fix(fraud): replace merchant-overlap proxy with real transfer-based circular detection
+[33m771c42e[m Remove interview talking points from README
+[33m2e4d8fe[m Add live deployment URL
+[33m84039cc[m Add home endpoint
+[33mb8b4a2c[m Update SpringDoc version
+[33m1df599c[m Track application.properties for Render deployment
+[33m84af25b[m Add default JWT expiration
+[33m65bc4ab[m Use Java 21 Docker image
+[33m0ffe1a0[m Use multi-stage Docker build
+[33m5079997[m Use environment variables
+[33macd60ae[m Switched AI from Gemini to Groq (llama-3.3-70b) — AI analysis fully working
+[33m20ed0ae[m  updated readme
+[33me81b5dc[m Input validation, global exception handling, ErrorResponse
+[33m6430fc2[m Global exception handling — ResourceNotFoundException, InvalidTransactionException, ErrorResponse
+[33m173364e[m Graph analysis — suspicious merchant, fan-in, circular transaction detection
+[33m1f94107[m JWT authentication — JwtUtil, JwtFilter, SecurityConfig, AuthController
+[33mf1d5310[m  made some changes in ai-analysis and controller
+[33m33831f3[m Gemini AI integration - AIAnalysisService, AIFraudReport, AppConfig
+[33m11fc1fb[m Added the aifraudreport model class
+[33me0aa425[m Day 5: FraudLog entity with OneToOne relationship, FraudLogRepository
+[33mb2467a5[m Create README.md for Fraud Detection Engine
+[33m9a6dc9e[m Week 1: Spring Boot setup, Transaction entity, Strategy pattern rule engine
